@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <group android:checkableBehavior="single">
+        <item
+            android:id="@+id/nav_history"
+            android:title="lịch Sử" />
+        <item
+            android:id="@+id/nav_like"
+            android:title="Yêu thích"/>
+        <item
+            android:id="@+id/nav_quanlytaikhoan"
+            android:title="Quản lý tài khoản"/>
+
+        <item
+            android:id="@+id/nav_update"
+            android:title="Cập nhật trạng thái bãi"/>
+        <item
+            android:id="@+id/nav_dkxe"
+            android:title="Dăng ký xe đỗ"/>
+
+    </group>
+    <group android:checkableBehavior="single">
+        <item
+            android:id="@+id/nav_Login"
+            android:title="Đăng Xuất"/>
+    </group>
+</menu>
