@@ -1,5 +1,4 @@
     package com.example.khach.parkingservice.Controller;
-
     import android.Manifest;
 import android.app.Dialog;
 import android.content.Context;
@@ -38,7 +37,6 @@ import android.widget.LinearLayout;
 import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
-
 import com.example.khach.parkingservice.Entities.Account;
 import com.example.khach.parkingservice.Entities.ParkingLot;
 import com.example.khach.parkingservice.R;
@@ -67,9 +65,7 @@ import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
-
 import org.json.JSONObject;
-
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
@@ -79,7 +75,6 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-
 import static com.example.khach.parkingservice.R.id.btnOK;
 import static com.example.khach.parkingservice.R.id.map;
 
@@ -95,6 +90,7 @@ public class MainActivity extends AppCompatActivity
     private Button btn_Location;
     private Button btn_Direction;
     private Polyline polyline;
+    private boolean checkGetMyLocation =false;
     private List<ParkingLot> listParking = new ArrayList<ParkingLot>();
     private List<String> listKM = new ArrayList<String>();
     private GoogleApiClient mGoogleApiClient;
@@ -150,6 +146,9 @@ public class MainActivity extends AppCompatActivity
         toggle.syncState();
         NavigationView navigationView = (NavigationView) findViewById(R.id.nav_view);
         navigationView.setNavigationItemSelectedListener(this);
+        listParking.removeAll(listParking);
+        listKM.removeAll(listKM);
+        getListParking();
         btn_Direction = (Button) findViewById(R.id.btn_Direction);
         btn_Direction.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -169,6 +168,7 @@ public class MainActivity extends AppCompatActivity
                                 @Override
                                 public void onClick(DialogInterface dialog, int which) {
                                     getDeviceLocation();
+                                    checkGetMyLocation = false;
                                     updateLocationUI();
                                     DrawPath(MainActivity.this.originCoordinate,MainActivity.this.mParkingLocation);
                                 }
@@ -300,10 +300,13 @@ public class MainActivity extends AppCompatActivity
             public void onClick(View v) {
                 startActivityForResult(intent, PLACE_AUTOCOMPLETE_REQUEST_CODE);
                 mMap.clear();
+                listKM.removeAll(listKM);
+                //listParking.removeAll(listParking);
                 //get Location Device
+                checkGetMyLocation = false;
                 getDeviceLocation();
                 updateLocationUI();
-                getListParking();
+                //getListParking();
 
             }
         });
@@ -312,8 +315,9 @@ public class MainActivity extends AppCompatActivity
             public void onClick(View v) {
 
                 getDeviceLocation();
+                checkGetMyLocation = true;
                 updateLocationUI();
-                getListParking();
+                //getListParking();
             }
         });
     }
@@ -338,6 +342,7 @@ public class MainActivity extends AppCompatActivity
         return p1;
     }
     private void getDeviceLocation() {
+
         if (ContextCompat.checkSelfPermission(this.getApplicationContext(),
                 Manifest.permission.ACCESS_FINE_LOCATION)
                 == PackageManager.PERMISSION_GRANTED) {
@@ -361,6 +366,13 @@ public class MainActivity extends AppCompatActivity
             Log.d(TAG, "Current location is null. Using defaults.");
             mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(mDefaultLocation, 15));
             mMap.getUiSettings().setMyLocationButtonEnabled(false);
+        }
+        listKM.removeAll(listKM);
+        for(int i=0;i< listParking.size();i++){
+            LatLng pointLocation;
+            pointLocation = getLocationFromAddress(getApplicationContext(), listParking.get(i).getAddress());
+            check = false;
+            DrawPath(MainActivity.this.originCoordinate,pointLocation);
         }
     }
     private void updateLocationUI() {
@@ -391,64 +403,59 @@ public class MainActivity extends AppCompatActivity
             mMap.getUiSettings().setMyLocationButtonEnabled(false);
             mLastLocation = null;
         }
-      /*  for(int i=0;i< listParking.size();i++){
-            LatLng pointLocation;
-            pointLocation = getLocationFromAddress(getApplicationContext(), listParking.get(i).getAddress());
-            check = false;
-            DrawPath(MainActivity.this.originCoordinate,pointLocation);
-        }
-        final Dialog dialog = new Dialog(context);
-        dialog.setContentView(R.layout.chose_accountcode);
-        String[] listChooseKM = new String[]{"1","2","3"};
-        final  Spinner spinnerKM = (Spinner) dialog.findViewById(R.id.spnSoKm);
-        ArrayAdapter<String> adapterRadius = new ArrayAdapter<String>(this,
-                android.R.layout.simple_list_item_checked, listChooseKM);
-        spinnerKM.setAdapter(adapterRadius);
-        Button dialogButtonOK = (Button) dialog.findViewById(btnOK);
-        dialogButtonOK.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                boolean checkNullParking=  false;
-                final float kmChose = Float.parseFloat(spinnerKM.getSelectedItem().toString());
-                String textKm =spinnerKM.getSelectedItem().toString();
-                for (int i = 0; i < listParking.size(); i++) {
-                    String km =listKM.get(i).toString();
-                    String resultKM =km.substring(0,km.length()-3);
-                    if(Float.parseFloat(resultKM)<kmChose) {
-                        try {
-                            checkNullParking = true;
-                            LatLng pointLocation;
-                            pointLocation = getLocationFromAddress(getApplicationContext(), listParking.get(i).getAddress());
-                            mMap.addMarker(new MarkerOptions().position(new LatLng(pointLocation.latitude, pointLocation.longitude))
-                                    .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE))
-                                    .title("Thông tin").snippet("STT :" + (i + 1) +
-                                            "\n" + "Tên Bãi : " + listParking.get(i).getPhoneNo() +
-                                            "\n" + "Số điện thoại : " + listParking.get(i).getName() +
-                                            "\n" + "Địa chỉ : " + listParking.get(i).getAddress() +
-                                            "\n" + "Sức Chứa : " + listParking.get(i).size +
-                                            "\nKhoảng cách đi bộ đến " + listKM.get(i).toString()));
-
-                        } catch (Exception ex) {
+        if (checkGetMyLocation == true) {
+            mMap.clear();
+            final Dialog dialog = new Dialog(context);
+            dialog.setContentView(R.layout.chose_accountcode);
+            String[] listChooseKM = new String[]{"1", "2", "3"};
+            final Spinner spinnerKM = (Spinner) dialog.findViewById(R.id.spnSoKm);
+            ArrayAdapter<String> adapterRadius = new ArrayAdapter<String>(this,
+                    android.R.layout.simple_list_item_checked, listChooseKM);
+            spinnerKM.setAdapter(adapterRadius);
+            Button dialogButtonOK = (Button) dialog.findViewById(btnOK);
+            dialogButtonOK.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    boolean checkNullParking = false;
+                    final float kmChose = Float.parseFloat(spinnerKM.getSelectedItem().toString());
+                    String textKm = spinnerKM.getSelectedItem().toString();
+                    for (int i = 0; i < listParking.size(); i++) {
+                        String km = listKM.get(i).toString();
+                        String resultKM = km.substring(0, km.length() - 3);
+                        if (Float.parseFloat(resultKM) < kmChose) {
+                            try {
+                                checkNullParking = true;
+                                LatLng pointLocation;
+                                pointLocation = getLocationFromAddress(getApplicationContext(), listParking.get(i).getAddress());
+                                mMap.addMarker(new MarkerOptions().position(new LatLng(pointLocation.latitude, pointLocation.longitude))
+                                        .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE))
+                                        .title("Thông tin").snippet("STT :" + (i + 1) +
+                                                "\n" + "Tên Bãi : " + listParking.get(i).getPhoneNo() +
+                                                "\n" + "Số điện thoại : " + listParking.get(i).getName() +
+                                                "\n" + "Địa chỉ : " + listParking.get(i).getAddress() +
+                                                "\n" + "Sức Chứa : " + listParking.get(i).size +
+                                                "\nKhoảng cách đi bộ đến " + listKM.get(i).toString()));
+                            } catch (Exception ex) {
+                            }
                         }
                     }
+                    if (checkNullParking == false) {
+                        Toast.makeText(context, "Không tìm thấy bãi đỗ xe trong phạm vi " + textKm + "km", Toast.LENGTH_SHORT).show();
+                        // dialog.dismiss();
+                    } else {
+                        dialog.dismiss();
+                    }
                 }
-                if(checkNullParking ==false){
-                    Toast.makeText(context, "Không tìm thấy bãi đỗ xe trong phạm vi "+textKm + "km", Toast.LENGTH_SHORT).show();
-                    // dialog.dismiss();
-                }else{
+            });
+            Button btnCacel = (Button) dialog.findViewById(R.id.btnCancel);
+            btnCacel.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
                     dialog.dismiss();
                 }
-            }
-        });
-        Button btnCacel = (Button) dialog.findViewById(R.id.btnCancel);
-        btnCacel.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                dialog.dismiss();
-            }
-        });
-        dialog.show();*/
-
+            });
+            dialog.show();
+        }
     }
     private void DrawPath(LatLng latLngFrom,LatLng latLngTo ){
         String url = getDirectionsUrl(latLngFrom, latLngTo);
@@ -489,13 +496,13 @@ public class MainActivity extends AppCompatActivity
                 //get Destination
                 destinationCoordinate = place.getLatLng();
                 LatLng pointLocation;
+                listKM.removeAll(listKM);
                 for (int i = 0; i < listParking.size(); i++) {
                     try {
                         check = false;
                         pointLocation = getLocationFromAddress(getApplicationContext(), listParking.get(i).getAddress());
                         DrawPath(MainActivity.this.destinationCoordinate, pointLocation);
                     }catch (Exception e){
-
                     }
                 }
                 final Dialog dialog = new Dialog(context);
